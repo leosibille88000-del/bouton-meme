@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My Bouton Meme</title>
+<meta name="description" content="Des boutons mèmes à cliquer : crée les tiens à partir de n'importe quelle vidéo.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9d9d9'/%3E%3Ccircle cx='32' cy='30' r='22' fill='%23111'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout : noir et blanc assumé. En-tête collant, grille de boutons d'arcade (cerclage acier, dôme noir laqué), fenêtre de création avec forme d'onde */
+:root{
+  --bg:#0a0a0a; --panel:#141414; --raise:#1d1d1d; --fg:#f5f5f5; --muted:#8c8c8c; --line:#2a2a2a; --hi:#ffffff;
+  --scrim:rgba(0,0,0,.75); --shadow:rgba(0,0,0,.7); --danger:#ff5a5a;
+  --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(10,10,10,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header .wrap{padding-block:14px;display:grid;gap:12px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:11px;margin-right:auto}
+.logo i{width:28px;height:28px;border-radius:50%;flex:none;background:radial-gradient(circle at 36% 28%,#777 0 10%,#151515 55%,#000);box-shadow:0 0 0 4px #d9d9d9,0 3px 0 4px #555}
+h1{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(20px,4.4vw,28px);letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+h1 span{font-weight:700;-webkit-text-stroke:1.2px var(--fg);color:transparent}
+.btn{font:800 14px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:#555}
+.btn.primary{background:var(--hi);color:#000;border-color:var(--hi)}
+.btn.primary:hover{background:#dcdcdc}
+.btn.danger{color:var(--danger);border-color:#4a2222}
+.btn[disabled]{opacity:.45;cursor:default}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search{flex:1 1 240px;min-width:0;position:relative}
+.search input{width:100%;box-sizing:border-box;font:700 15px var(--body);padding:10px 14px 10px 38px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted)}
+.vol{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 12px;color:var(--muted);font-weight:800;font-size:13px}
+.vol input{width:90px;accent-color:var(--hi)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:none;font:800 13px var(--body);padding:6px 12px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer}
+.chip:hover{color:var(--fg)}
+.chip[aria-pressed="true"]{background:var(--hi);color:#000}
+:is(.btn,.chip,.pad,.icon,input,textarea,.seg button,.drop):focus-visible{outline:2px solid var(--hi);outline-offset:3px}
+
+main .wrap{padding-block:32px 56px}
+.notice{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--muted);font-weight:700;font-size:13px;margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:34px 12px}
+.item{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;min-width:0}
+
+.pad{--c:340;--s:104px;width:var(--s);height:var(--s);border-radius:50%;border:0;padding:0;cursor:pointer;position:relative;
+  background:linear-gradient(160deg,#fbfbfb,#bdbdbd 40%,#6d6d6d 75%,#3a3a3a);
+  box-shadow:0 12px 20px var(--shadow),inset 0 1px 0 #fff,inset 0 -3px 5px rgba(0,0,0,.45)}
+.dome{position:absolute;inset:11px;border-radius:50%;transform:translateY(-4px);transition:transform .06s,box-shadow .06s;
+  background:radial-gradient(circle at 36% 26%,hsl(var(--c) 100% 86%) 0 7%,hsl(var(--c) 92% 60%) 34%,hsl(var(--c) 82% 44%) 72%,hsl(var(--c) 78% 32%));
+  box-shadow:0 5px 0 hsl(var(--c) 70% 20%),0 7px 7px rgba(0,0,0,.6),inset 0 -5px 10px hsl(var(--c) 75% 22% / .55)}
+.dome::before{content:"";position:absolute;left:19%;right:19%;top:8%;height:32%;border-radius:50%;background:linear-gradient(rgba(255,255,255,.42),rgba(255,255,255,0))}
+.pad:hover .dome{filter:brightness(1.08)}
+.pad:active .dome,.pad.hit .dome{transform:translateY(1px);box-shadow:0 0 0 hsl(var(--c) 70% 20%),0 2px 3px rgba(0,0,0,.6),inset 0 -3px 8px hsl(var(--c) 75% 22% / .55)}
+.pad::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid hsl(var(--c) 95% 65%);opacity:0;pointer-events:none}
+.pad.playing::after{animation:ring .9s ease-out infinite}
+@keyframes ring{from{opacity:.9;transform:scale(.95)}to{opacity:0;transform:scale(1.16)}}
+.glyph{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:900 20px var(--body);pointer-events:none;transform:translateY(-4px);opacity:.85}
+.pad:active .glyph,.pad.hit .glyph{transform:translateY(1px)}
+
+.name{font-weight:800;font-size:14px;line-height:1.25;overflow-wrap:anywhere;max-width:100%}
+.meta{display:flex;align-items:center;gap:4px;min-height:24px}
+.tag{font-size:11px;font-weight:800;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.tag.mine{color:#000;background:var(--hi);border-color:var(--hi)}
+.icon{border:0;background:transparent;color:var(--muted);cursor:pointer;font:800 15px var(--body);width:26px;height:24px;border-radius:8px}
+.icon:hover{color:var(--fg);background:var(--raise)}
+.icon.on{color:var(--hi)}
+
+.empty{grid-column:1/-1;display:grid;justify-items:center;gap:14px;text-align:center;color:var(--muted);padding:56px 0;font-weight:700}
+.empty .pad{--s:84px;cursor:default;opacity:.5;filter:grayscale(1)}
+.empty .pad .dome{inset:9px}
+.empty b{color:var(--fg);font-family:var(--display);font-size:22px;font-weight:800}
+.hint{color:var(--muted);font-size:13px;margin-top:40px;text-align:center}
+kbd{font:800 12px var(--body);border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 6px;background:var(--panel)}
+
+.modal{position:fixed;inset:0;z-index:20;background:var(--scrim);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:20px;width:min(480px,100%);max-height:100%;overflow:auto;padding:22px;display:grid;gap:16px;box-shadow:0 24px 60px var(--shadow);box-sizing:border-box}
+.sheet h2{margin:0;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.01em}
+.field{display:grid;gap:6px;min-width:0}
+.field>span,.lab{font-weight:800;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input[type=text],.field textarea{font:700 15px var(--body);padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;box-sizing:border-box}
+.field textarea{resize:vertical;min-height:60px}
+.field input[type=range]{accent-color:var(--hi);width:100%}
+.drop{display:block;border:1.5px dashed #444;border-radius:14px;padding:16px;text-align:center;color:var(--muted);font-weight:700;cursor:pointer}
+.drop:hover{border-color:var(--hi);color:var(--fg)}
+.drop input{display:none}
+.seg{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;background:var(--bg);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.seg button{font:800 14px var(--body);border:0;border-radius:9px;padding:9px 4px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--hi);color:#000}
+.trim{display:grid;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px}
+.lab{display:flex;justify-content:space-between}
+.lab b{font-variant-numeric:tabular-nums;color:var(--fg)}
+.wave{display:block;width:100%;height:90px;border-radius:10px;background:var(--panel);border:1px solid var(--line);touch-action:none;cursor:crosshair;box-sizing:border-box}
+.trim small{color:var(--muted);font-weight:700;font-size:12px}
+.hue{height:12px;border-radius:999px;background:linear-gradient(90deg,hsl(0 90% 58%),hsl(60 90% 58%),hsl(120 90% 50%),hsl(180 90% 50%),hsl(240 90% 62%),hsl(300 90% 58%),hsl(360 90% 58%))}
+.colorrow{display:flex;align-items:center;gap:14px}
+.colorrow .pad{--s:60px;cursor:default;flex:none}
+.colorrow .pad .dome{inset:7px;transform:translateY(-3px)}
+.colorrow .field{flex:1}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.row .spacer{flex:1}
+.err{color:var(--danger);font-weight:800;font-size:13px;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--hi);color:#000;font-weight:800;padding:10px 16px;border-radius:12px;max-width:calc(100% - 32px)}
+@media (max-width:480px){.grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:28px 8px}.pad{--s:88px}.dome{inset:9px}.vol input{width:64px}.top .btn span{display:none}}
+@media (prefers-reduced-motion:reduce){.pad.playing::after{animation:none;opacity:.8}.dome{transition:none}}
+.who{font-size:12px;font-weight:700;color:var(--muted);margin-top:-6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct{font:800 13px var(--body);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct b{font-size:10px;background:var(--hi);color:#000;border-radius:999px;padding:1px 6px;margin-left:6px}
+.field input[type=password]{font:700 15px var(--body);padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.sheet p.small{margin:0;color:var(--muted);font-weight:600;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo"><i></i><h1>My Bouton <span>Meme</span></h1></div>
+      <button class="acct" id="acctBtn" type="button">Se connecter</button>
+      <button class="btn" id="stop" type="button">■ <span>Stop</span></button>
+      <button class="btn primary" id="newBtn" type="button">+ <span>Nouveau son</span></button>
+    </div>
+    <div class="bar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Rechercher un son" autocomplete="off" aria-label="Rechercher un son">
+      </div>
+      <label class="vol" for="vol">VOL <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></label>
+    </div>
+    <div class="chips" id="chips" role="toolbar" aria-label="Filtres"></div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="notice" id="notice" hidden></p>
+    <div class="grid" id="grid"></div>
+    <p class="hint"><kbd>Espace</kbd> coupe tout · <kbd>1</kbd>–<kbd>9</kbd> jouent les 9 premiers sons · ✎ sur tes sons pour les modifier</p>
+  </div>
+</main>
+
+<div class="modal" id="authModal" hidden>
+  <form class="sheet" id="authForm" autocomplete="on">
+    <h2 id="authTitle">Connexion</h2>
+    <p class="small">Un compte sert à créer tes sons. Pour écouter, pas besoin.</p>
+    <div class="seg" id="authSeg" role="group" aria-label="Connexion ou inscription">
+      <button type="button" data-mode="in" aria-pressed="true">Se connecter</button>
+      <button type="button" data-mode="up" aria-pressed="false">Créer un compte</button>
+    </div>
+    <label class="field"><span>Pseudo</span><input id="aPseudo" type="text" maxlength="20" autocomplete="username" required placeholder="3 à 20 lettres, chiffres ou _"></label>
+    <label class="field"><span>Mot de passe</span><input id="aPass" type="password" minlength="6" autocomplete="current-password" required placeholder="6 caractères minimum"></label>
+    <p class="err" id="aErr" hidden></p>
+    <div class="row">
+      <button class="btn danger" id="logoutBtn" type="button" hidden>Se déconnecter</button>
+      <span class="spacer"></span>
+      <button class="btn" id="authCancel" type="button">Annuler</button>
+      <button class="btn primary" id="authSubmit" type="submit">Se connecter</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal" id="editor" hidden>
+  <form class="sheet" id="editForm" autocomplete="off">
+    <h2 id="editTitle">Nouveau son</h2>
+    <div class="seg" id="typeSeg" role="group" aria-label="Type de son">
+      <button type="button" data-type="audio" aria-pressed="true">Son d'une vidéo</button>
+      <button type="button" data-type="voice" aria-pressed="false">Voix</button>
+    </div>
+    <label class="field"><span>Nom du bouton</span><input id="fName" type="text" maxlength="40" required placeholder="Ex : Bruh"></label>
+
+    <label class="drop" data-for="audio-new" id="drop" tabindex="0">
+      <input id="fFile" type="file" accept="video/*,audio/*">
+      <span id="dropText">Choisir une vidéo ou un son · MP4, MOV, MP3…</span>
+    </label>
+
+    <div class="trim" data-for="audio-trim" hidden>
+      <canvas class="wave" id="wave" aria-label="Forme du son : glisse pour choisir le passage"></canvas>
+      <small>Glisse sur le son pour choisir le passage, puis ajuste avec les curseurs.</small>
+      <label class="field"><div class="lab">Début <b id="startOut">0,0 s</b></div><input id="fStart" type="range" min="0" max="10" step="0.1" value="0"></label>
+      <label class="field"><div class="lab">Durée <b id="durOut">3,0 s</b></div><input id="fDur" type="range" min="0.3" max="10" step="0.1" value="3"></label>
+      <button class="btn" id="listenBtn" type="button">▶ Écouter l'extrait</button>
+    </div>
+    <p class="small" data-for="audio-edit">Pour changer le passage, supprime ce son et recrée-le.</p>
+
+    <label class="field" data-for="voice"><span>Phrase à dire</span><textarea id="fText" maxlength="200">Bruh</textarea></label>
+    <label class="field" data-for="voice"><span>Voix : grave ↔ aiguë</span><input id="fPitch" type="range" min="0" max="2" step="0.1" value="1"></label>
+    <label class="field" data-for="voice"><span>Vitesse</span><input id="fRate" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+
+    <div class="colorrow">
+      <span class="pad" id="pvPad" aria-hidden="true"><span class="dome"></span></span>
+      <label class="field"><span>Couleur du bouton</span><div class="hue"></div><input id="fHue" type="range" min="0" max="359" value="340"></label>
+    </div>
+
+    <p class="err" id="fErr" hidden></p>
+    <div class="row">
+      <button class="btn danger" id="delBtn" type="button" hidden>Supprimer</button>
+      <span class="spacer"></span>
+      <button class="btn" id="testBtn" type="button">▶ Tester</button>
+      <button class="btn" id="cancelBtn" type="button">Annuler</button>
+      <button class="btn primary" id="saveBtn" type="submit">Créer</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const vol = () => +$('vol').value;
+const sec = n => (Math.round(n * 10) / 10).toLocaleString('fr-FR', { minimumFractionDigits: 1 }) + ' s';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const EMAIL_DOMAIN = '@mybouton-meme.com';
+const CLIP_RATE = 32000;
+
+const cfg = window.MBM_CONFIG || {};
+const configured = window.supabase && /^https:\/\//.test(cfg.supabaseUrl || '') && cfg.supabaseKey && !/COLLE_ICI/.test(cfg.supabaseKey);
+const sb = configured ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey) : null;
+
+// ---------- son ----------
+let ctx, master;
+const active = new Set(), buffers = new Map();
+
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain();
+    master.gain.value = vol();
+    master.connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+const decode = ab => new Promise((res, rej) => audio().decodeAudioData(ab, res, rej));
+
+function getBuffer(url) {
+  if (!buffers.has(url)) {
+    const job = fetch(url).then(r => { if (!r.ok) throw new Error('fetch'); return r.arrayBuffer(); }).then(decode);
+    job.catch(() => buffers.delete(url));
+    buffers.set(url, job);
+  }
+  return buffers.get(url);
+}
+
+function playBuffer(buf, start = 0, dur = 0, pad) {
+  audio();
+  const g = ctx.createGain(), s = ctx.createBufferSource();
+  const len = Math.max(.05, Math.min(dur || buf.duration, buf.duration - start));
+  const now = ctx.currentTime;
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(1, now + .006);
+  g.gain.setValueAtTime(1, now + Math.max(.01, len - .03));
+  g.gain.linearRampToValueAtTime(0, now + len);
+  s.buffer = buf;
+  s.connect(g).connect(master);
+  g._end = () => { if (!active.has(g)) return; active.delete(g); try { s.stop(); } catch {} g.disconnect(); pad?.classList.remove('playing'); };
+  s.onended = g._end;
+  active.add(g);
+  pad?.classList.add('playing');
+  s.start(now, start, len);
+}
+
+function say({ text, pitch = 1, rate = 1 }) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'fr-FR'; u.pitch = pitch; u.rate = rate; u.volume = vol();
+    speechSynthesis.speak(u);
+    return u;
+  } catch { return null; }
+}
+
+const urlOf = b => sb.storage.from('sounds').getPublicUrl(b.path).data.publicUrl;
+
+async function play(b, pad) {
+  if (b.kind === 'voice') {
+    const u = say(b);
+    if (u && pad) { pad.classList.add('playing'); u.onend = u.onerror = () => pad.classList.remove('playing'); }
+    return;
+  }
+  pad?.classList.add('playing');
+  try { playBuffer(await getBuffer(urlOf(b)), 0, 0, pad); }
+  catch { pad?.classList.remove('playing'); toast('Impossible de lire ce son.'); }
+}
+
+function stopAll() {
+  [...active].forEach(n => n._end?.());
+  active.clear();
+  try { speechSynthesis.cancel(); } catch {}
+  document.querySelectorAll('.pad.playing').forEach(p => p.classList.remove('playing'));
+}
+
+// découpe le passage choisi en un petit WAV mono, volume calé au maximum
+async function renderClip(buf, start, dur) {
+  const oc = new OfflineAudioContext(1, Math.ceil(dur * CLIP_RATE), CLIP_RATE);
+  const s = oc.createBufferSource(), g = oc.createGain();
+  s.buffer = buf;
+  g.gain.setValueAtTime(0, 0);
+  g.gain.linearRampToValueAtTime(1, .006);
+  g.gain.setValueAtTime(1, Math.max(.01, dur - .03));
+  g.gain.linearRampToValueAtTime(0, dur);
+  s.connect(g).connect(oc.destination);
+  s.start(0, start, dur);
+  const out = await oc.startRendering();
+  const data = out.getChannelData(0), n = data.length;
+  let peak = 0;
+  for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(data[i]));
+  const gain = peak > 0.01 ? 0.95 / peak : 1;
+  const view = new DataView(new ArrayBuffer(44 + n * 2));
+  const w = (o, str) => { for (let i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); };
+  w(0, 'RIFF'); view.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, CLIP_RATE, true); view.setUint32(28, CLIP_RATE * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  w(36, 'data'); view.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const v = Math.max(-1, Math.min(1, data[i] * gain));
+    view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+// ---------- état ----------
+const store = {
+  get(k, def) { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let favs = new Set(store.get('mbm-favs', []));
+let filter = 'Tous', loaded = false, sounds = [];
+let me = null, pseudo = '', isAdmin = false;
+
+const grid = $('grid'), q = $('q');
+const FILTERS = { 'Tous': () => true, '★ Favoris': b => favs.has(b.id), 'Mes sons': b => b.owner === me, 'Vidéos': b => b.kind === 'audio', 'Voix': b => b.kind === 'voice' };
+const canEdit = b => isAdmin || (me && b.owner === me);
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 3200);
+}
+
+function visible() {
+  const term = q.value.trim().toLowerCase();
+  return sounds.filter(b => FILTERS[filter](b) && (!term || b.name.toLowerCase().includes(term) || (b.owner_name || '').includes(term)));
+}
+
+function render() {
+  const names = Object.keys(FILTERS).filter(f => f !== 'Mes sons' || me);
+  if (!names.includes(filter)) filter = 'Tous';
+  $('chips').innerHTML = names.map(f => `<button class="chip" type="button" aria-pressed="${f === filter}" data-f="${f}">${f}</button>`).join('');
+  grid.textContent = '';
+  if (!loaded) { grid.innerHTML = '<p class="empty">Chargement des sons…</p>'; return; }
+  const list = visible();
+  if (!list.length) {
+    const none = !sounds.length;
+    grid.innerHTML = `<div class="empty"><span class="pad" aria-hidden="true"><span class="dome"></span></span>
+      <b>${none ? 'Aucun son pour l’instant' : 'Rien ici'}</b>
+      <span>${none ? 'Crée le premier : « + Nouveau son », choisis une vidéo et garde juste le passage que tu veux.'
+        : filter === '★ Favoris' ? 'Clique sur ☆ sous un son pour l’ajouter ici.' : 'Aucun son ne correspond.'}</span></div>`;
+    return;
+  }
+  list.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<button class="pad" type="button" aria-label="Jouer ${esc(b.name)}"><span class="dome"></span>${b.kind === 'voice' ? '<span class="glyph">💬</span>' : ''}</button>
+      <div class="name"></div>
+      <div class="who"></div>
+      <div class="meta">
+        <span class="tag ${b.owner === me ? 'mine' : ''}">${i < 9 ? i + 1 + ' · ' : ''}${b.kind === 'audio' ? sec(b.duration || 0) : 'Voix'}</span>
+        <button class="icon fav ${favs.has(b.id) ? 'on' : ''}" type="button" aria-label="Favori">${favs.has(b.id) ? '★' : '☆'}</button>
+        ${canEdit(b) ? '<button class="icon edit" type="button" aria-label="Modifier">✎</button>' : ''}
+      </div>`;
+    el.querySelector('.name').textContent = b.name;
+    el.querySelector('.who').textContent = b.owner_name ? '@' + b.owner_name : '';
+    const pad = el.querySelector('.pad');
+    pad.style.setProperty('--c', b.hue ?? 340);
+    pad.onclick = () => play(b, pad);
+    el.querySelector('.fav').onclick = () => {
+      favs.has(b.id) ? favs.delete(b.id) : favs.add(b.id);
+      store.set('mbm-favs', [...favs]); render();
+    };
+    el.querySelector('.edit')?.addEventListener('click', () => openEditor(b));
+    grid.append(el);
+  });
+}
+
+$('chips').onclick = e => { const c = e.target.closest('.chip'); if (c) { filter = c.dataset.f; render(); } };
+q.oninput = render;
+$('stop').onclick = stopAll;
+$('vol').oninput = () => { if (master) master.gain.value = vol(); };
+
+async function loadSounds() {
+  const { data, error } = await sb.from('sounds').select('*').order('created_at');
+  if (error) {
+    $('notice').textContent = 'Impossible de charger les sons. Recharge la page dans un instant.';
+    $('notice').hidden = false;
+  } else {
+    sounds = data; $('notice').hidden = true;
+  }
+  loaded = true; render();
+}
+
+// ---------- compte ----------
+const authModal = $('authModal');
+let authMode = 'in';
+
+function setAuthMode(m) {
+  authMode = m;
+  document.querySelectorAll('#authSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  $('authSubmit').textContent = m === 'in' ? 'Se connecter' : 'Créer mon compte';
+  $('aPass').autocomplete = m === 'in' ? 'current-password' : 'new-password';
+}
+$('authSeg').onclick = e => { const b = e.target.closest('button'); if (b) setAuthMode(b.dataset.mode); };
+
+function openAuth(mode = 'in') {
+  $('aErr').hidden = true;
+  const logged = !!me;
+  $('authTitle').textContent = logged ? '@' + pseudo : 'Connexion';
+  $('authSeg').hidden = logged;
+  document.querySelectorAll('#authForm .field').forEach(f => f.hidden = logged);
+  $('authSubmit').hidden = logged;
+  $('logoutBtn').hidden = !logged;
+  setAuthMode(mode);
+  authModal.hidden = false;
+  if (!logged) $('aPseudo').focus();
+}
+$('acctBtn').onclick = () => { if (!sb) return toast('Le site n’est pas encore configuré.'); openAuth(); };
+$('authCancel').onclick = () => authModal.hidden = true;
+authModal.onclick = e => { if (e.target === authModal) authModal.hidden = true; };
+$('logoutBtn').onclick = async () => { await sb.auth.signOut(); authModal.hidden = true; toast('Déconnecté'); };
+
+$('authForm').onsubmit = async e => {
+  e.preventDefault();
+  const err = msg => { $('aErr').textContent = msg; $('aErr').hidden = false; };
+  const p = $('aPseudo').value.trim().toLowerCase(), pass = $('aPass').value;
+  if (!/^[a-z0-9_]{3,20}$/.test(p)) return err('Le pseudo doit faire 3 à 20 caractères : lettres, chiffres ou _.');
+  if (pass.length < 6) return err('Le mot de passe doit faire au moins 6 caractères.');
+  $('authSubmit').disabled = true;
+  try {
+    const email = p + EMAIL_DOMAIN;
+    if (authMode === 'up') {
+      const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { pseudo: p } } });
+      if (error) throw error;
+      if (!data.session) throw { message: 'confirm' };
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+    }
+    authModal.hidden = true;
+    $('aPass').value = '';
+    toast('Salut @' + p + ' !');
+  } catch (ex) {
+    const m = ex?.message || '';
+    err(/already|registered|exists/i.test(m) ? 'Ce pseudo est déjà pris.'
+      : /invalid login|credentials/i.test(m) ? 'Pseudo ou mot de passe incorrect.'
+      : m === 'confirm' ? 'Le compte est créé, mais la confirmation par email est encore activée dans Supabase. Désactive-la (voir le guide).'
+      : /rate|too many/i.test(m) ? 'Trop d’essais. Attends une minute et réessaie.'
+      : 'Connexion impossible pour le moment. Réessaie.');
+  } finally {
+    $('authSubmit').disabled = false;
+  }
+};
+
+async function onSession(session) {
+  me = session?.user?.id || null;
+  pseudo = session?.user?.user_metadata?.pseudo || '';
+  isAdmin = false;
+  if (me) {
+    const { data } = await sb.rpc('is_admin');
+    isAdmin = data === true;
+  }
+  $('acctBtn').innerHTML = me ? '@' + esc(pseudo) + (isAdmin ? '<b>ADMIN</b>' : '') : 'Se connecter';
+  render();
+}
+
+// ---------- éditeur ----------
+const editor = $('editor'), form = $('editForm');
+let editing = null, newType = 'audio', confirmDel = false, srcBuf = null, clipLen = 0, peaks = null;
+
+function showFields(type, isNew) {
+  document.querySelectorAll('[data-for]').forEach(f => {
+    const k = f.dataset.for;
+    f.hidden = k === 'audio-new' ? !(type === 'audio' && isNew)
+      : k === 'audio-trim' ? !(type === 'audio' && isNew && clipLen)
+      : k === 'audio-edit' ? !(type === 'audio' && !isNew)
+      : k !== type;
+  });
+  $('testBtn').hidden = type === 'audio' && isNew;
+}
+function setType(t) {
+  newType = t;
+  document.querySelectorAll('#typeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.type === t));
+  showFields(t, true);
+}
+$('typeSeg').onclick = e => { const b = e.target.closest('button'); if (b) setType(b.dataset.type); };
+$('fHue').oninput = () => $('pvPad').style.setProperty('--c', $('fHue').value);
+
+function drawWave() {
+  const cv = $('wave');
+  if (!peaks || cv.closest('[hidden]')) return;
+  const dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (!w) return;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr);
+  const s = +$('fStart').value, d = +$('fDur').value;
+  const x0 = s / clipLen * w, x1 = (s + d) / clipLen * w;
+  const col = `hsl(${$('fHue').value} 92% 62%)`;
+  c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(x0, 0, x1 - x0, h);
+  const bars = Math.floor(w / 3);
+  for (let i = 0; i < bars; i++) {
+    const p = peaks[Math.floor(i / bars * peaks.length)], bh = Math.max(2, p * (h - 12)), x = i * 3, inSel = x >= x0 && x <= x1;
+    c.fillStyle = inSel ? col : '#4a4a4a';
+    c.fillRect(x, (h - bh) / 2, 2, bh);
+  }
+  c.fillStyle = '#ffffff';
+  c.fillRect(x0 - 1, 0, 2, h); c.fillRect(x1 - 1, 0, 2, h);
+}
+
+function updateTrim() {
+  const s = +$('fStart').value;
+  $('fDur').max = Math.max(.3, Math.min(30, clipLen - s)).toFixed(1);
+  if (+$('fDur').value > +$('fDur').max) $('fDur').value = $('fDur').max;
+  $('startOut').textContent = sec(s);
+  $('durOut').textContent = sec(+$('fDur').value);
+  drawWave();
+}
+$('fStart').oninput = updateTrim;
+$('fDur').oninput = updateTrim;
+$('fHue').addEventListener('input', drawWave);
+
+function setSel(s, d) {
+  d = Math.max(.3, Math.min(d, 30, clipLen));
+  s = Math.max(0, Math.min(s, clipLen - d));
+  $('fStart').value = s.toFixed(1); $('fDur').value = d.toFixed(1);
+  updateTrim();
+}
+
+(() => {
+  const cv = $('wave');
+  let t0 = null, moved = false;
+  const at = e => { const r = cv.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * clipLen; };
+  cv.addEventListener('pointerdown', e => { if (!clipLen) return; t0 = at(e); moved = false; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (t0 === null) return;
+    const t = at(e);
+    if (Math.abs(t - t0) > .1) { moved = true; setSel(Math.min(t, t0), Math.abs(t - t0)); }
+  });
+  cv.addEventListener('pointerup', () => { if (t0 !== null && !moved) setSel(t0, +$('fDur').value); t0 = null; });
+  addEventListener('resize', drawWave);
+})();
+
+$('fFile').onchange = async () => {
+  const f = $('fFile').files[0];
+  if (!f) return;
+  showErr('');
+  $('dropText').textContent = 'Lecture du son…';
+  srcBuf = null; clipLen = 0; peaks = null;
+  showFields('audio', true);
+  try {
+    srcBuf = await decode(await f.arrayBuffer());
+  } catch {
+    $('dropText').textContent = 'Choisir une vidéo ou un son · MP4, MOV, MP3…';
+    return showErr('Impossible de lire le son de ce fichier. Essaie une vidéo MP4 ou un MP3.');
+  }
+  $('dropText').textContent = f.name;
+  if (!$('fName').value) $('fName').value = f.name.replace(/\.[^.]+$/, '').slice(0, 40);
+  const data = srcBuf.getChannelData(0), n = 600, step = Math.floor(data.length / n) || 1;
+  let max = 0;
+  peaks = Array.from({ length: n }, (_, i) => {
+    let m = 0;
+    for (let j = i * step, e = Math.min(data.length, j + step); j < e; j += 8) m = Math.max(m, Math.abs(data[j]));
+    max = Math.max(max, m);
+    return m;
+  }).map(v => v / (max || 1));
+  clipLen = srcBuf.duration;
+  $('fStart').max = Math.max(0, clipLen - .3).toFixed(1);
+  $('fStart').value = 0;
+  $('fDur').value = Math.min(3, clipLen);
+  showFields('audio', true);
+  updateTrim();
+  requestAnimationFrame(drawWave);
+};
+$('drop').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fFile').click(); } };
+$('listenBtn').onclick = () => { stopAll(); if (srcBuf) playBuffer(srcBuf, +$('fStart').value, +$('fDur').value); };
+$('testBtn').onclick = () => {
+  if ((editing?.kind || newType) === 'voice') say({ text: $('fText').value, pitch: +$('fPitch').value, rate: +$('fRate').value });
+  else if (editing) play(editing);
+};
+
+function showErr(msg) { $('fErr').textContent = msg; $('fErr').hidden = !msg; }
+
+function openEditor(b) {
+  editing = b || null; confirmDel = false; clipLen = 0; srcBuf = null; peaks = null;
+  showErr('');
+  $('editTitle').textContent = b ? 'Modifier le son' : 'Nouveau son';
+  $('saveBtn').textContent = b ? 'Enregistrer' : 'Créer';
+  $('typeSeg').hidden = !!b;
+  $('delBtn').hidden = !b; $('delBtn').textContent = 'Supprimer';
+  $('fName').value = b?.name || '';
+  $('fHue').value = b?.hue ?? Math.floor(Math.random() * 360);
+  $('pvPad').style.setProperty('--c', $('fHue').value);
+  $('fText').value = b?.text || 'Bruh';
+  $('fPitch').value = b?.pitch ?? 1; $('fRate').value = b?.rate ?? 1;
+  $('fFile').value = '';
+  $('dropText').textContent = 'Choisir une vidéo ou un son · MP4, MOV, MP3…';
+  if (b) showFields(b.kind, false); else setType('audio');
+  editor.hidden = false;
+  $('fName').focus();
+}
+function closeEditor() { stopAll(); editor.hidden = true; editing = null; srcBuf = null; }
+$('cancelBtn').onclick = closeEditor;
+editor.onclick = e => { if (e.target === editor) closeEditor(); };
+
+$('delBtn').onclick = async () => {
+  if (!confirmDel) { confirmDel = true; $('delBtn').textContent = 'Confirmer la suppression'; return; }
+  const b = editing;
+  const { error } = await sb.from('sounds').delete().eq('id', b.id);
+  if (error) return showErr('Suppression impossible. Tu n’as peut-être pas le droit de supprimer ce son.');
+  if (b.path) await sb.storage.from('sounds').remove([b.path]);
+  sounds = sounds.filter(x => x.id !== b.id);
+  closeEditor(); render(); toast('Son supprimé');
+};
+
+const voiceData = name => ({ text: $('fText').value.trim() || name, pitch: +$('fPitch').value, rate: +$('fRate').value });
+
+form.onsubmit = async e => {
+  e.preventDefault();
+  showErr('');
+  const name = $('fName').value.trim();
+  if (!name) return showErr('Donne un nom au son.');
+  const hue = +$('fHue').value, save = $('saveBtn');
+  save.disabled = true;
+  try {
+    if (editing) {
+      const patch = { name, hue, ...(editing.kind === 'voice' ? voiceData(name) : {}) };
+      const { error } = await sb.from('sounds').update(patch).eq('id', editing.id);
+      if (error) throw { msg: 'Modification impossible. Réessaie.' };
+      toast('Son modifié');
+    } else if (newType === 'audio') {
+      if (!srcBuf) throw { msg: 'Choisis une vidéo ou un son sur ton appareil.' };
+      save.textContent = 'Envoi…';
+      const dur = +$('fDur').value;
+      const wav = await renderClip(srcBuf, +$('fStart').value, dur);
+      const path = `${me}/${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}.wav`;
+      const up = await sb.storage.from('sounds').upload(path, wav, { contentType: 'audio/wav' });
+      if (up.error) throw { msg: 'L’envoi du son a échoué. Réessaie.' };
+      const { error } = await sb.from('sounds').insert({ name, hue, kind: 'audio', path, duration: dur });
+      if (error) { await sb.storage.from('sounds').remove([path]); throw { msg: 'Enregistrement impossible. Réessaie.' }; }
+      filter = 'Tous'; toast('Son créé');
+    } else {
+      const { error } = await sb.from('sounds').insert({ name, hue, kind: 'voice', ...voiceData(name) });
+      if (error) throw { msg: 'Enregistrement impossible. Réessaie.' };
+      filter = 'Tous'; toast('Son créé');
+    }
+    closeEditor();
+    loadSounds();
+  } catch (err) {
+    showErr(err?.msg || 'Une erreur est survenue. Réessaie.');
+  } finally {
+    save.disabled = false;
+    save.textContent = editing ? 'Enregistrer' : 'Créer';
+  }
+};
+
+$('newBtn').onclick = () => {
+  if (!sb) return toast('Le site n’est pas encore configuré.');
+  if (!me) { toast('Connecte-toi pour créer tes sons.'); return openAuth('up'); }
+  openEditor(null);
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (!editor.hidden) closeEditor(); authModal.hidden = true; return; }
+  if (e.target.matches('input,textarea') || !editor.hidden || !authModal.hidden) return;
+  if (e.code === 'Space') { e.preventDefault(); stopAll(); return; }
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 9) {
+    const b = visible()[n - 1], pad = grid.querySelectorAll('.item .pad')[n - 1];
+    if (!b || !pad) return;
+    pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 90);
+    play(b, pad);
+  }
+});
+
+// ---------- démarrage ----------
+render();
+if (!sb) {
+  loaded = true; render();
+  $('notice').textContent = 'Site pas encore configuré : colle ton Project URL et ta clé Supabase dans le fichier config.js.';
+  $('notice').hidden = false;
+} else {
+  loadSounds();
+  sb.auth.getSession().then(({ data }) => onSession(data.session));
+  sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => onSession(session)));
+  sb.channel('sounds').on('postgres_changes', { event: '*', schema: 'public', table: 'sounds' }, loadSounds).subscribe();
+}
+</script>
+</body>
+</html>
